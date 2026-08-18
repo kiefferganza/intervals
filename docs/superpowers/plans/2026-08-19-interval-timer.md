@@ -610,6 +610,7 @@ export function useIntervalTimer(config: TimerConfig) {
 
   function pause() {
     if (!isRunning.value || isPaused.value) return
+    remaining.value = Math.max(0, (endTime - Date.now()) / 1000)
     isPaused.value = true
     clearTick()
   }
