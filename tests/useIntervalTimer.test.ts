@@ -56,6 +56,14 @@ describe('useIntervalTimer', () => {
     expect(timer.remaining.value).toBeCloseTo(remainingAtPause - 1, 1)
   })
 
+  it('pause recomputes remaining at a non-tick-aligned instant (not stale from the last tick)', () => {
+    const timer = useIntervalTimer({ warmupSeconds: 0, workSeconds: 10, restSeconds: 5, rounds: 1 })
+    timer.start()
+    vi.advanceTimersByTime(3120) // not a multiple of the 250ms tick interval
+    timer.pause()
+    expect(timer.remaining.value).toBeCloseTo(10 - 3.12, 1)
+  })
+
   it('skip immediately advances to the next phase', () => {
     const timer = useIntervalTimer({ warmupSeconds: 0, workSeconds: 10, restSeconds: 5, rounds: 2 })
     timer.start()
