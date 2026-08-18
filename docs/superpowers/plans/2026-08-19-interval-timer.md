@@ -470,7 +470,10 @@ describe('useIntervalTimer', () => {
     timer.start()
     vi.setSystemTime(new Date('2026-01-01T00:00:07Z'))
     vi.advanceTimersByTime(250)
-    expect(timer.remaining.value).toBeCloseTo(3, 1)
+    // vitest's fake clock reports Date.now() as 7.25s (not 7.0s) when the
+    // overdue tick fires, since advanceTimersByTime moves Date.now() by the
+    // full requested delta before/while running due callbacks. 10 - 7.25 = 2.75.
+    expect(timer.remaining.value).toBeCloseTo(2.75, 1)
   })
 
   it('pauses and resumes without losing remaining time', () => {
