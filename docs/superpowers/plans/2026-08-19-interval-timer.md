@@ -724,7 +724,10 @@ let sharedConfig: ReturnType<typeof useLocalStorage<TimerConfig>> | null = null
 
 export function useTimerConfig() {
   if (!sharedConfig) {
-    sharedConfig = useLocalStorage<TimerConfig>(STORAGE_KEY, { ...defaultTimerConfig })
+    // deep: true — nested property mutations (config.value.workSeconds = x) must
+    // trigger persistence, not just top-level reassignment. flush: 'sync' — tests
+    // read localStorage synchronously right after a mutation.
+    sharedConfig = useLocalStorage<TimerConfig>(STORAGE_KEY, { ...defaultTimerConfig }, { deep: true, flush: 'sync' })
   }
   return { config: sharedConfig }
 }
