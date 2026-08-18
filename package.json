@@ -11,6 +11,10 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "nuxt": "^3.13.0"
+    "nuxt": "^3.13.0",
+    "sharp": "^0.35.3"
+  },
+  "dependencies": {
+    "@vite-pwa/nuxt": "^1.1.1"
   }
 }
