@@ -1,0 +1,25 @@
+{
+  "name": "intervals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "^4.1.0",
+    "@vue/test-utils": "^2.4.11",
+    "happy-dom": "^20.11.2",
+    "nuxt": "^3.13.0",
+    "sharp": "^0.35.3",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "@vite-pwa/nuxt": "^1.1.1",
+    "@vueuse/nuxt": "^14.4.0"
+  }
+}

@@ -470,7 +470,10 @@ describe('useIntervalTimer', () => {
     timer.start()
     vi.setSystemTime(new Date('2026-01-01T00:00:07Z'))
     vi.advanceTimersByTime(250)
-    expect(timer.remaining.value).toBeCloseTo(3, 1)
+    // vitest's fake clock reports Date.now() as 7.25s (not 7.0s) when the
+    // overdue tick fires, since advanceTimersByTime moves Date.now() by the
+    // full requested delta before/while running due callbacks. 10 - 7.25 = 2.75.
+    expect(timer.remaining.value).toBeCloseTo(2.75, 1)
   })
 
   it('pauses and resumes without losing remaining time', () => {
@@ -607,6 +610,7 @@ export function useIntervalTimer(config: TimerConfig) {
 
   function pause() {
     if (!isRunning.value || isPaused.value) return
+    remaining.value = Math.max(0, (endTime - Date.now()) / 1000)
     isPaused.value = true
     clearTick()
   }
@@ -720,7 +724,10 @@ let sharedConfig: ReturnType<typeof useLocalStorage<TimerConfig>> | null = null
 
 export function useTimerConfig() {
   if (!sharedConfig) {
-    sharedConfig = useLocalStorage<TimerConfig>(STORAGE_KEY, { ...defaultTimerConfig })
+    // deep: true — nested property mutations (config.value.workSeconds = x) must
+    // trigger persistence, not just top-level reassignment. flush: 'sync' — tests
+    // read localStorage synchronously right after a mutation.
+    sharedConfig = useLocalStorage<TimerConfig>(STORAGE_KEY, { ...defaultTimerConfig }, { deep: true, flush: 'sync' })
   }
   return { config: sharedConfig }
 }
