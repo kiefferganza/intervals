@@ -9,7 +9,9 @@ export function buildPhaseSequence(config: TimerConfig): PhaseInfo[] {
 
   for (let round = 1; round <= config.rounds; round++) {
     sequence.push({ name: 'work', label: 'Work', color: '#22c55e', duration: config.workSeconds, round })
-    if (round < config.rounds) {
+    // A zero-length rest is not a phase: the engine would blow through it in a
+    // single tick but still fire a cue, double-beeping every round.
+    if (round < config.rounds && config.restSeconds > 0) {
       sequence.push({ name: 'rest', label: 'Rest', color: '#3b82f6', duration: config.restSeconds, round })
     }
   }

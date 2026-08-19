@@ -28,7 +28,15 @@ export function useIntervalTimer(config: TimerConfig) {
   }
 
   function notify() {
-    for (const cb of listeners) cb(phase.value)
+    // Isolated per listener: one throwing cue must not stop the others, nor
+    // escape into the engine's own control flow.
+    for (const cb of listeners) {
+      try {
+        cb(phase.value)
+      } catch (error) {
+        console.error('[useIntervalTimer] onPhaseChange listener threw', error)
+      }
+    }
   }
 
   function clearTick() {
@@ -48,11 +56,13 @@ export function useIntervalTimer(config: TimerConfig) {
     if (phaseIndex.value >= sequence.length - 1) return
     phaseIndex.value += 1
     armPhase()
-    notify()
+    // Reach the terminal state before notifying, so the tick loop is stopped
+    // even if a listener misbehaves.
     if (phase.value.name === 'done') {
       clearTick()
       isRunning.value = false
     }
+    notify()
   }
 
   function tick() {

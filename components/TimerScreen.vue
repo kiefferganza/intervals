@@ -6,19 +6,32 @@ const props = defineProps<{ config: TimerConfig }>()
 const emit = defineEmits<{ exit: [] }>()
 
 const timer = useIntervalTimer(props.config)
-const { fireCue } = useTimerCues()
+const { fireCue, unlockAudio } = useTimerCues()
 const wakeLock = useWakeLock()
 
 timer.onPhaseChange((phase) => {
   fireCue(phase)
 })
 
+// Browsers auto-release the wake lock whenever the document is hidden, and
+// never restore it. Re-take it on every return to a still-running session.
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible' && timer.isRunning.value) {
+    wakeLock.acquire()
+  }
+}
+
 onMounted(() => {
+  // This mount happens inside the Start tap, the only place iOS Safari lets an
+  // AudioContext start running.
+  unlockAudio()
   timer.start()
   wakeLock.acquire()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
 onUnmounted(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
   wakeLock.release()
 })
 

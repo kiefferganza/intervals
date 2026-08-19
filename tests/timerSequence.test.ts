@@ -18,6 +18,12 @@ describe('buildPhaseSequence', () => {
     expect(names).toEqual(['work1', 'rest1', 'work2', 'rest2', 'work3', 'done'])
   })
 
+  it('omits rest phases entirely when restSeconds is 0', () => {
+    const sequence = buildPhaseSequence({ warmupSeconds: 0, workSeconds: 20, restSeconds: 0, rounds: 2 })
+    const names = sequence.map(p => `${p.name}${p.round ?? ''}`)
+    expect(names).toEqual(['work1', 'work2', 'done'])
+  })
+
   it('always ends with a done phase of duration 0', () => {
     const sequence = buildPhaseSequence({ warmupSeconds: 0, workSeconds: 20, restSeconds: 5, rounds: 1 })
     expect(sequence.at(-1)).toMatchObject({ name: 'done', duration: 0, round: null })
