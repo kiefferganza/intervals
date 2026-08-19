@@ -1,12 +1,50 @@
 <script setup lang="ts">
+import type { StepConfig, StepKind } from '~/types/timer'
+import { defaultStepLabel } from '~/utils/timerSequence'
+
 const { config } = useTimerConfig()
 
 const emit = defineEmits<{ start: [] }>()
 
+const KIND_OPTIONS: { value: StepKind; label: string }[] = [
+  { value: 'warmup', label: 'Warm-up' },
+  { value: 'work', label: 'Work' },
+  { value: 'rest', label: 'Rest' },
+  { value: 'custom', label: 'Custom' },
+]
+
+function labelPlaceholder(step: StepConfig) {
+  return step.kind === 'custom' ? 'Label' : defaultStepLabel(step.kind)
+}
+
+function addStep() {
+  config.value.steps.push({
+    id: crypto.randomUUID(),
+    kind: 'custom',
+    label: '',
+    seconds: 0,
+    repeat: true,
+  })
+}
+
+function removeStep(id: string) {
+  config.value.steps = config.value.steps.filter(step => step.id !== id)
+}
+
+function moveStep(index: number, direction: -1 | 1) {
+  const target = index + direction
+  if (target < 0 || target >= config.value.steps.length) return
+  const steps = [...config.value.steps]
+  const [moved] = steps.splice(index, 1)
+  steps.splice(target, 0, moved)
+  config.value.steps = steps
+}
+
 const isValid = computed(() =>
-  config.value.warmupSeconds >= 0 &&
-  config.value.workSeconds > 0 &&
-  config.value.restSeconds >= 0 &&
+  config.value.steps.length > 0 &&
+  config.value.steps.every(step =>
+    step.seconds > 0 && (step.kind !== 'custom' || step.label.trim() !== '')
+  ) &&
   config.value.rounds > 0
 )
 </script>
@@ -16,31 +54,48 @@ const isValid = computed(() =>
     <header class="setup__head">
       <p class="setup__eyebrow">Offline interval trainer</p>
       <h1 class="setup__title">Interval Timer</h1>
-      <p class="setup__lede">Dial in the clock once. Warm up, work, rest, repeat.</p>
+      <p class="setup__lede">Build your sequence, set the rounds, go.</p>
     </header>
 
-    <div class="setup__fields">
-      <label class="field field--warmup">
-        <span class="field__name">Warm Up</span>
-        <input v-model.number="config.warmupSeconds" type="number" min="0" inputmode="numeric" />
-        <span class="field__unit">sec</span>
-      </label>
-      <label class="field field--work">
-        <span class="field__name">Work</span>
-        <input v-model.number="config.workSeconds" type="number" min="1" inputmode="numeric" />
-        <span class="field__unit">sec</span>
-      </label>
-      <label class="field field--rest">
-        <span class="field__name">Rest</span>
-        <input v-model.number="config.restSeconds" type="number" min="0" inputmode="numeric" />
-        <span class="field__unit">sec</span>
-      </label>
-      <label class="field field--rounds">
-        <span class="field__name">Rounds</span>
-        <input v-model.number="config.rounds" type="number" min="1" inputmode="numeric" />
-        <span class="field__unit">total</span>
-      </label>
+    <div class="setup__steps">
+      <div v-for="(step, index) in config.steps" :key="step.id" class="step" :class="`step--${step.kind}`">
+        <div class="step__row">
+          <select v-model="step.kind" class="step__kind">
+            <option v-for="option in KIND_OPTIONS" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+          <input
+            v-model="step.label"
+            class="step__label"
+            type="text"
+            :placeholder="labelPlaceholder(step)"
+          />
+        </div>
+
+        <div class="step__row">
+          <DurationInput v-model="step.seconds" />
+          <label class="step__repeat">
+            <input v-model="step.repeat" type="checkbox" />
+            Repeat every round
+          </label>
+        </div>
+
+        <div class="step__actions">
+          <button type="button" :disabled="index === 0" @click="moveStep(index, -1)">Up</button>
+          <button type="button" :disabled="index === config.steps.length - 1" @click="moveStep(index, 1)">Down</button>
+          <button type="button" class="step__remove" @click="removeStep(step.id)">Remove</button>
+        </div>
+      </div>
     </div>
+
+    <button type="button" class="add-step" @click="addStep">+ Add step</button>
+
+    <label class="field field--rounds">
+      <span class="field__name">Rounds</span>
+      <input v-model.number="config.rounds" type="number" min="1" inputmode="numeric" />
+      <span class="field__unit">total</span>
+    </label>
 
     <button class="start" :disabled="!isValid" @click="emit('start')">Start</button>
   </div>
@@ -50,10 +105,8 @@ const isValid = computed(() =>
 .setup {
   min-height: 100dvh;
   display: grid;
-  /* `safe` keeps the top of the form reachable when the viewport is short;
-     browsers without it fall back to top-aligned + page scroll, which is fine. */
   align-content: safe center;
-  gap: clamp(28px, 5vh, 44px);
+  gap: clamp(20px, 4vh, 32px);
   width: 100%;
   max-width: 620px;
   margin-inline: auto;
@@ -61,7 +114,6 @@ const isValid = computed(() =>
     max(clamp(32px, 7vh, 64px), env(safe-area-inset-bottom));
 }
 
-/* --- Header: left-aligned, no centered-hero cliche ---------------------- */
 .setup__head > * {
   margin: 0;
 }
@@ -90,22 +142,100 @@ const isValid = computed(() =>
   color: var(--text-dim);
 }
 
-/* --- Fields: asymmetric fractional grid, single column on phones -------- */
-.setup__fields {
+.setup__steps {
   display: grid;
-  grid-template-columns: 1fr;
   gap: 12px;
 }
 
-@media (min-width: 560px) {
-  .setup__fields {
-    grid-template-columns: 1.18fr 0.82fr;
-    gap: 14px;
-  }
+.step {
+  --rail: var(--line-strong);
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--rail);
+}
+
+.step--warmup { --rail: var(--warmup); }
+.step--work { --rail: var(--work); }
+.step--rest { --rail: var(--rest); }
+.step--custom { --rail: var(--custom); }
+
+.step__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.step__kind {
+  flex: 0 0 auto;
+  background: var(--bg-raise);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+.step__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 2px;
+  font-size: 0.95rem;
+}
+
+.step__repeat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.step__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.step__actions button {
+  background: var(--bg-raise);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.step__actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.step__remove {
+  margin-left: auto;
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.add-step {
+  justify-self: start;
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
 }
 
 .field {
-  --rail: var(--line-strong);
+  --rail: var(--done);
   position: relative;
   display: grid;
   grid-template-columns: 1fr auto;
@@ -115,39 +245,7 @@ const isValid = computed(() =>
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
-  transition:
-    border-color 0.4s var(--ease),
-    background 0.4s var(--ease),
-    transform 0.4s var(--ease);
 }
-
-.field::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 18px;
-  bottom: 18px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--rail);
-  transition: top 0.4s var(--ease), bottom 0.4s var(--ease);
-}
-
-.field:focus-within {
-  background: var(--bg-raise);
-  border-color: color-mix(in srgb, var(--rail) 50%, var(--line));
-}
-
-.field:focus-within::before {
-  top: 10px;
-  bottom: 10px;
-}
-
-.field--warmup { --rail: var(--warmup); }
-.field--work { --rail: var(--work); }
-.field--rest { --rail: var(--rest); }
-.field--rounds { --rail: var(--done); }
 
 .field__name {
   grid-column: 1 / -1;
@@ -171,13 +269,6 @@ const isValid = computed(() =>
   letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
   appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.field input::-webkit-outer-spin-button,
-.field input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
 }
 
 .field__unit {
@@ -189,7 +280,6 @@ const isValid = computed(() =>
   color: var(--text-faint);
 }
 
-/* --- Primary action ----------------------------------------------------- */
 .start {
   min-height: 76px;
   border: 1px solid transparent;
@@ -199,54 +289,12 @@ const isValid = computed(() =>
   font-size: 1.18rem;
   font-weight: 700;
   letter-spacing: 0.01em;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.26),
-    0 14px 30px -24px rgba(34, 197, 94, 0.4);
-  transition:
-    transform 0.32s var(--ease),
-    filter 0.32s var(--ease),
-    background 0.32s var(--ease),
-    box-shadow 0.32s var(--ease);
-}
-
-.start:hover:not(:disabled) {
-  filter: brightness(1.06);
-}
-
-.start:active:not(:disabled) {
-  transform: scale(0.985) translateY(1px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .start:disabled {
   background: var(--surface);
   border-color: var(--line);
   color: var(--text-faint);
-  box-shadow: none;
   cursor: not-allowed;
 }
-
-/* --- Staggered load-in (transform/opacity only) -------------------------- */
-@keyframes setup-rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.setup__head,
-.field,
-.start {
-  animation: setup-rise 0.6s var(--ease) both;
-}
-
-.field:nth-child(1) { animation-delay: 60ms; }
-.field:nth-child(2) { animation-delay: 110ms; }
-.field:nth-child(3) { animation-delay: 160ms; }
-.field:nth-child(4) { animation-delay: 210ms; }
-.start { animation-delay: 270ms; }
 </style>

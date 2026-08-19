@@ -39,6 +39,7 @@ const started = ref(false)
   --work: #22c55e;
   --rest: #3b82f6;
   --done: #a855f7;
+  --custom: #ec4899;
   --accent: var(--work);
 
   --radius-lg: 26px;
