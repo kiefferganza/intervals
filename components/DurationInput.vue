@@ -36,19 +36,50 @@ function commit(nextDigits: string) {
   emit('update:modelValue', digitsToSeconds(nextDigits))
 }
 
+function appendDigit(digit: string) {
+  commit((digits.value + digit).slice(-4))
+}
+
+function removeLastDigit() {
+  commit(digits.value.slice(0, -1))
+}
+
 function onKeydown(event: KeyboardEvent) {
   if (/^[0-9]$/.test(event.key)) {
     event.preventDefault()
-    commit((digits.value + event.key).slice(-4))
+    appendDigit(event.key)
     return
   }
   if (event.key === 'Backspace') {
     event.preventDefault()
-    commit(digits.value.slice(0, -1))
+    removeLastDigit()
     return
   }
   if (event.key !== 'Tab') {
     event.preventDefault()
+  }
+}
+
+// Fallback for mobile on-screen keyboards (notably Android Gboard) that
+// report key: 'Unidentified' on keydown, so onKeydown's digit check never
+// fires and the field silently stops responding. beforeinput fires before
+// the DOM mutates and carries the real inserted data even in that case, so
+// we can still read the intended keystroke here.
+//
+// We always preventDefault - this is a fully controlled component and must
+// never let the browser mutate the DOM value directly. In the normal case
+// (desktop/iOS, or Android when keydown DID resolve a usable key), onKeydown
+// already called preventDefault() on the keydown event, which suppresses the
+// input mutation that would have triggered this beforeinput - so this
+// handler only ever does work in the Android/Unidentified-key scenario.
+function onBeforeInput(event: InputEvent) {
+  event.preventDefault()
+  if (event.inputType === 'insertText' && event.data && /^[0-9]$/.test(event.data)) {
+    appendDigit(event.data)
+    return
+  }
+  if (event.inputType === 'deleteContentBackward') {
+    removeLastDigit()
   }
 }
 </script>
@@ -60,6 +91,7 @@ function onKeydown(event: KeyboardEvent) {
     inputmode="numeric"
     :value="display"
     @keydown="onKeydown"
+    @beforeinput="onBeforeInput"
     @focus="focused = true"
     @blur="focused = false"
   />
