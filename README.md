@@ -1,8 +1,8 @@
 # Interval Timer
 
-Offline-first interval timer PWA. Warm up, work, rest, repeat.
+Offline-first interval timer PWA. Build your own step sequence, repeat it, go.
 
-Set a warmup, work, and rest duration plus a round count, hit Start, and go. Big circular progress ring, audio + vibration cues on every phase change, screen stays awake while running, and your settings persist across sessions. Installable to your home screen and fully usable with no network connection.
+Add warm-up, work, rest, or custom steps in any order, give each one a label, an mm:ss duration, and mark it to run once or repeat every round, then set a round count and hit Start. Big circular progress ring, audio + vibration cues on every phase change, screen stays awake while running, and your settings persist across sessions. Installable to your home screen and fully usable with no network connection.
 
 ## Stack
 

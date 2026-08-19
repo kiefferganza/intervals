@@ -26,7 +26,7 @@ export default defineNuxtConfig({
     manifest: {
       name: 'Interval Timer',
       short_name: 'Intervals',
-      description: 'Offline-first warmup/work/rest interval timer',
+      description: 'Offline-first interval timer with a custom step sequence',
       // Must match --bg in app.vue and the theme-color meta it sets.
       theme_color: '#0a0b0d',
       background_color: '#0a0b0d',
