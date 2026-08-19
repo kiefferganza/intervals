@@ -1,10 +1,16 @@
 <script setup lang="ts">
 const { config } = useTimerConfig()
 const started = ref(false)
+
+// Title, viewport-fit=cover and theme-color live in nuxt.config.ts's app.head,
+// not in a useHead() here: with ssr: false a component-level useHead only runs
+// after hydration, so those tags would never reach the prerendered app shell.
 </script>
 
 <template>
   <div class="app-shell">
+    <!-- Renders <link rel="manifest"> into <head>; no layout impact. -->
+    <VitePwaManifest />
     <SetupScreen v-if="!started" @start="started = true" />
     <TimerScreen v-else :config="{ ...config }" @exit="started = false" />
   </div>

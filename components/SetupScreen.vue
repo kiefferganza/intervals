@@ -174,10 +174,6 @@ const isValid = computed(() =>
   -moz-appearance: textfield;
 }
 
-.field input:focus {
-  outline: none;
-}
-
 .field input::-webkit-outer-spin-button,
 .field input::-webkit-inner-spin-button {
   -webkit-appearance: none;
