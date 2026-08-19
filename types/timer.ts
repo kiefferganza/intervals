@@ -1,9 +1,16 @@
-export type PhaseName = 'warmup' | 'work' | 'rest' | 'done'
+export type StepKind = 'warmup' | 'work' | 'rest' | 'custom'
+export type PhaseName = StepKind | 'done'
+
+export interface StepConfig {
+  id: string
+  kind: StepKind
+  label: string
+  seconds: number
+  repeat: boolean
+}
 
 export interface TimerConfig {
-  warmupSeconds: number
-  workSeconds: number
-  restSeconds: number
+  steps: StepConfig[]
   rounds: number
 }
 
